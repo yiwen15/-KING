@@ -2026,3 +2026,184 @@ function cancelDrawing() {
         showScreen('map-screen');
     }
 }
+
+// =======================
+// Falling Catch Game (接接樂)
+// =======================
+let fallingGame = { 
+    isActive: false, 
+    score: 0, 
+    timeLeft: 30, 
+    items: [], 
+    particles: [], 
+    targetChar: null, 
+    catcherX: 400, 
+    lastTime: 0 
+};
+
+function startFallingGame() {
+    showScreen('falling-game-screen');
+    document.getElementById('falling-game-over').style.display = 'none';
+    const canvas = document.getElementById('falling-canvas');
+    
+    // Find all characters that have vocabulary defined
+    const charsWithVocab = Object.keys(libraryData.characters).filter(c => libraryData.characters[c].vocab || libraryData.characters[c].phrases);
+    if(charsWithVocab.length === 0) { 
+        alert('沒有足夠的字庫資料！'); 
+        return; 
+    }
+    
+    // Pick a random target character
+    fallingGame.targetChar = charsWithVocab[Math.floor(Math.random() * charsWithVocab.length)];
+    
+    fallingGame.score = 0;
+    fallingGame.timeLeft = 30;
+    fallingGame.items = [];
+    fallingGame.particles = [];
+    fallingGame.isActive = true;
+    fallingGame.lastTime = Date.now();
+    
+    document.getElementById('falling-score').innerText = fallingGame.score;
+    document.getElementById('falling-timer').innerText = fallingGame.timeLeft;
+    document.getElementById('falling-game-title').innerText = `🌧️ 請接出「${fallingGame.targetChar}」的造詞！ 🌧️`;
+    
+    // Track mouse / touch for the basket
+    canvas.onmousemove = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        fallingGame.catcherX = (e.clientX - rect.left) * scaleX;
+    };
+    canvas.ontouchmove = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        fallingGame.catcherX = (e.touches[0].clientX - rect.left) * scaleX;
+        e.preventDefault();
+    };
+    
+    requestAnimationFrame(fallingGameLoop);
+}
+
+function spawnFallingItem() {
+    // 50% chance to be a correct vocab word, 50% chance to be a random one
+    const isCorrect = Math.random() > 0.5;
+    let text = '';
+    
+    if(isCorrect) {
+        const data = libraryData.characters[fallingGame.targetChar];
+        const vocab = data.vocab || data.phrases || [fallingGame.targetChar];
+        text = vocab[Math.floor(Math.random() * vocab.length)];
+    } else {
+        const allChars = Object.keys(libraryData.characters);
+        let randomChar = allChars[Math.floor(Math.random() * allChars.length)];
+        while(randomChar === fallingGame.targetChar) {
+            randomChar = allChars[Math.floor(Math.random() * allChars.length)];
+        }
+        const data = libraryData.characters[randomChar];
+        const vocab = data.vocab || data.phrases || [randomChar];
+        text = vocab[Math.floor(Math.random() * vocab.length)];
+    }
+    
+    fallingGame.items.push({
+        x: Math.random() * 700 + 50,
+        y: -40,
+        speed: 2 + Math.random() * 3, // Fall speed
+        text: text,
+        isCorrect: isCorrect,
+        color: ['#fbbf24', '#38bdf8', '#4ade80', '#f87171', '#c084fc'][Math.floor(Math.random() * 5)]
+    });
+}
+
+function fallingGameLoop() {
+    if(!fallingGame.isActive) return;
+    const canvas = document.getElementById('falling-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Update timer
+    const now = Date.now();
+    if(now - fallingGame.lastTime > 1000) {
+        fallingGame.timeLeft--;
+        document.getElementById('falling-timer').innerText = fallingGame.timeLeft;
+        fallingGame.lastTime = now;
+        
+        if(fallingGame.timeLeft <= 0) {
+            endFallingGame();
+            return;
+        }
+    }
+    
+    // Spawn items occasionally
+    if(Math.random() < 0.04) spawnFallingItem();
+    
+    // Draw Catcher (Basket)
+    const catcherY = 430;
+    const catcherW = 120;
+    const catcherH = 40;
+    ctx.font = '60px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🧺', fallingGame.catcherX, catcherY + 20);
+    
+    // Draw and update falling items
+    for(let i = fallingGame.items.length - 1; i >= 0; i--) {
+        let item = fallingGame.items[i];
+        item.y += item.speed;
+        
+        ctx.font = 'bold 28px sans-serif';
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = item.color;
+        ctx.lineWidth = 4;
+        ctx.strokeText(item.text, item.x, item.y);
+        ctx.fillText(item.text, item.x, item.y);
+        
+        // Collision detection
+        if(item.y > catcherY - 20 && item.y < catcherY + catcherH && Math.abs(item.x - fallingGame.catcherX) < catcherW / 2 + 40) {
+            if(item.isCorrect) {
+                fallingGame.score += 10;
+                fallingGame.particles.push({x: item.x, y: item.y, text: '+10', color: '#4ade80', life: 30});
+            } else {
+                fallingGame.score = Math.max(0, fallingGame.score - 5);
+                fallingGame.particles.push({x: item.x, y: item.y, text: '-5', color: '#ef4444', life: 30});
+            }
+            document.getElementById('falling-score').innerText = fallingGame.score;
+            fallingGame.items.splice(i, 1);
+        } else if(item.y > canvas.height + 50) {
+            // Remove if fell out of bounds
+            fallingGame.items.splice(i, 1);
+        }
+    }
+    
+    // Draw particles
+    for(let i = fallingGame.particles.length - 1; i >= 0; i--) {
+        let p = fallingGame.particles[i];
+        p.y -= 2;
+        p.life--;
+        ctx.globalAlpha = p.life / 30;
+        ctx.font = 'bold 32px sans-serif';
+        ctx.fillStyle = p.color;
+        ctx.fillText(p.text, p.x, p.y);
+        ctx.globalAlpha = 1;
+        if(p.life <= 0) fallingGame.particles.splice(i, 1);
+    }
+    
+    requestAnimationFrame(fallingGameLoop);
+}
+
+function endFallingGame() {
+    fallingGame.isActive = false;
+    document.getElementById('falling-game-over').style.display = 'block';
+    
+    let gemsEarned = 0;
+    if(fallingGame.score > 0) {
+        gainXP(fallingGame.score);
+        if (!currentUser.stats) currentUser.stats = {};
+        gemsEarned = Math.max(1, Math.floor(fallingGame.score / 20)); // Earn 1 gem per 20 score
+        currentUser.stats.gems = (currentUser.stats.gems || 0) + gemsEarned;
+        saveUser();
+    }
+    
+    const finalScoreText = fallingGame.score > 0 ? `${fallingGame.score} 分 (獲得 ${gemsEarned} 💎, ${fallingGame.score} XP)` : `${fallingGame.score} 分`;
+    document.getElementById('falling-final-score').innerText = finalScoreText;
+}
