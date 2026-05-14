@@ -2109,7 +2109,7 @@ function spawnFallingItem() {
     fallingGame.items.push({
         x: Math.random() * 700 + 50,
         y: -40,
-        speed: 2 + Math.random() * 3, // Fall speed
+        speed: 1.2 + Math.random() * 1.5, // Slower fall speed
         text: text,
         isCorrect: isCorrect,
         color: ['#fbbf24', '#38bdf8', '#4ade80', '#f87171', '#c084fc'][Math.floor(Math.random() * 5)]
@@ -2137,8 +2137,8 @@ function fallingGameLoop() {
         }
     }
     
-    // Spawn items occasionally
-    if(Math.random() < 0.04) spawnFallingItem();
+    // Spawn items occasionally (slower spawn rate)
+    if(Math.random() < 0.02) spawnFallingItem();
     
     // Draw Catcher (Basket)
     const catcherY = 430;
@@ -2181,6 +2181,9 @@ function fallingGameLoop() {
                     fallingGame.targetChar = charsWithVocab[Math.floor(Math.random() * charsWithVocab.length)];
                     fallingGame.targetZhuyin = libraryData.characters[fallingGame.targetChar].zhuyin;
                     fallingGame.particles.push({x: fallingGame.catcherX, y: catcherY - 60, text: '換題目！', color: '#fcd34d', life: 50});
+                    
+                    // Clear current items so user only sees items for the new target
+                    fallingGame.items = [];
                 }
             } else {
                 fallingGame.score = Math.max(0, fallingGame.score - 5);
