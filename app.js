@@ -2038,7 +2038,8 @@ let fallingGame = {
     particles: [], 
     targetChar: null, 
     catcherX: 400, 
-    lastTime: 0 
+    lastTime: 0,
+    correctCatchCount: 0
 };
 
 function startFallingGame() {
@@ -2063,6 +2064,7 @@ function startFallingGame() {
     fallingGame.particles = [];
     fallingGame.isActive = true;
     fallingGame.lastTime = Date.now();
+    fallingGame.correctCatchCount = 0;
     
     document.getElementById('falling-score').innerText = fallingGame.score;
     document.getElementById('falling-timer').innerText = fallingGame.timeLeft;
@@ -2170,7 +2172,16 @@ function fallingGameLoop() {
         if(item.y > catcherY - 20 && item.y < catcherY + catcherH && Math.abs(item.x - fallingGame.catcherX) < catcherW / 2 + 40) {
             if(item.isCorrect) {
                 fallingGame.score += 10;
+                fallingGame.correctCatchCount++;
                 fallingGame.particles.push({x: item.x, y: item.y, text: '+10', color: '#4ade80', life: 30});
+                
+                if (fallingGame.correctCatchCount >= 2) {
+                    fallingGame.correctCatchCount = 0;
+                    const charsWithVocab = Object.keys(libraryData.characters).filter(c => libraryData.characters[c].vocab || libraryData.characters[c].phrases);
+                    fallingGame.targetChar = charsWithVocab[Math.floor(Math.random() * charsWithVocab.length)];
+                    fallingGame.targetZhuyin = libraryData.characters[fallingGame.targetChar].zhuyin;
+                    fallingGame.particles.push({x: fallingGame.catcherX, y: catcherY - 60, text: '換題目！', color: '#fcd34d', life: 50});
+                }
             } else {
                 fallingGame.score = Math.max(0, fallingGame.score - 5);
                 fallingGame.particles.push({x: item.x, y: item.y, text: '-5', color: '#ef4444', life: 30});
