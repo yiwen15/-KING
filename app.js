@@ -2055,6 +2055,7 @@ function startFallingGame() {
     
     // Pick a random target character
     fallingGame.targetChar = charsWithVocab[Math.floor(Math.random() * charsWithVocab.length)];
+    fallingGame.targetZhuyin = libraryData.characters[fallingGame.targetChar].zhuyin;
     
     fallingGame.score = 0;
     fallingGame.timeLeft = 30;
@@ -2065,7 +2066,7 @@ function startFallingGame() {
     
     document.getElementById('falling-score').innerText = fallingGame.score;
     document.getElementById('falling-timer').innerText = fallingGame.timeLeft;
-    document.getElementById('falling-game-title').innerText = `🌧️ 請接出「${fallingGame.targetChar}」的造詞！ 🌧️`;
+    document.getElementById('falling-game-title').innerText = `🌧️ 請接出籃子上注音的造詞！ 🌧️`;
     
     // Track mouse / touch for the basket
     canvas.onmousemove = (e) => {
@@ -2145,6 +2146,13 @@ function fallingGameLoop() {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('🧺', fallingGame.catcherX, catcherY + 20);
+    
+    // Draw Zhuyin above the basket
+    if(fallingGame.targetZhuyin) {
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText(fallingGame.targetZhuyin, fallingGame.catcherX, catcherY - 30);
+    }
     
     // Draw and update falling items
     for(let i = fallingGame.items.length - 1; i >= 0; i--) {
