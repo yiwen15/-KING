@@ -2184,6 +2184,8 @@ function fallingGameLoop() {
                     
                     // Clear current items so user only sees items for the new target
                     fallingGame.items = [];
+                    document.getElementById('falling-score').innerText = fallingGame.score;
+                    break; // Exit the loop immediately to prevent errors!
                 }
             } else {
                 fallingGame.score = Math.max(0, fallingGame.score - 5);
